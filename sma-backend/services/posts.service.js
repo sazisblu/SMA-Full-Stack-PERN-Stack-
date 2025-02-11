@@ -2,87 +2,125 @@ import { PrismaClient } from "@prisma/client";
 import "dotenv/config";
 const prisma = new PrismaClient();
 
-const fetchpost = async (req) => {
-  const { searchTerm, cursor, limit } = req;
-
-  const take = limit ? Number(limit) : 10; // Default limit
-  const skip = cursor ? 1 : 0; // Skip the cursor if it exists
-  const cursorObj = cursor ? { id: cursor } : undefined; // Cursor object for Prisma
-
-  try {
-    const posts = await prisma.post.findMany({
-      skip: skip,
-      take: take,
-      cursor: cursorObj,
-      where: {
-        content: searchTerm
-          ? {
-              contains: searchTerm,
-              mode: "insensitive", // Perform case-insensitive search
-            }
-          : undefined,
-      },
-      orderBy: {
-        createdAt: "desc", // Newest first
-      },
-    });
-
-    let nextCursor = null;
-
-    if (posts.length > 0) {
-      nextCursor = posts[posts.length - 1].id;
-    }
-
-    return {
-      posts,
-      nextCursor,
-    };
-  } catch (error) {
-    console.error("Error fetching posts:", error);
-    throw error; // Re-throw to be handled in the route
-  }
-};
-
 const createpost = async (req) => {
-  const { content } = req.body;
+  const content = req.body.content;
   console.log("Server at  createpost service");
+  // console.log(req.body);
   const post = await prisma.post.create({
     data: {
       content,
+      userID: req.body.User.id,
+    },
+    include: {
+      User: true,
     },
   });
 
   return { post }; //creation of a post
 };
 
-const updatepost = async (req) => {
-  let { enteredid, enteredcontent, updatelike } = req.body;
-  console.log(req.body);
-  const post = await prisma.post.update({
+const fetchpost = async (req) => {
+  console.log("Inside the fetchpost service");
+  const searchParams = req.query.search;
+  const result = await prisma.post.findMany({
     where: {
-      id: enteredid,
+      OR: [
+        {
+          content: {
+            contains: searchParams,
+            mode: "insensitive",
+          },
+        },
+        {
+          User: {
+            fullName: {
+              contains: searchParams,
+              mode: "insensitive",
+            },
+          },
+        },
+      ],
     },
-    data: {
-      content: enteredcontent,
-      like: updatelike,
+    include: {
+      User: true,
     },
   });
+  return result;
+};
 
-  return { post };
+const updatepost = async (req) => {
+  // let postId = req.body.id;
+  const { postId } = req.params;
+  // let { postId } = req.params;
+  console.log(postId);
+  const { like } = req.body;
+  const { content } = req.body;
+  console.log("postId:", postId);
+  // console.log("entered content:", content);
+  // console.log(req.body);
+  let post_to_find = await prisma.post.findFirst({
+    where: {
+      id: +postId,
+    },
+  });
+  // const likesate = true;
+  if (content) {
+    var post = await prisma.post.update({
+      // i have used var here so that it can be accessed outside the scope as well
+      where: {
+        id: +postId,
+      },
+      data: {
+        content: content,
+        // like: updatelike(likesate),
+      },
+    });
+    // console.log("likesate:", like);
+    return { post };
+  }
+
+  // the like is always returned as  true so  we code accordingly
+  if (like) {
+    // //if like in the request  arrives  as  true
+    // const requiredpost = await prisma.post.findFirst({
+    //   where: {
+    //     id: +postId,
+    //   },
+    // });
+    // console.log("Before:", requiredpost.likecount);
+    const post = await prisma.post.update({
+      where: {
+        id: +postId,
+      },
+      data: {
+        likesCount: { increment: 1 },
+      },
+    });
+    return { post };
+  }
+
+  console.log("updated the content or like");
 };
 
 const deletepost = async (req) => {
-  const { Id } = req.params;
-
-  const post = await prisma.user.delete({
+  const { postId } = req.params;
+  // console.log("post id:", postId);
+  // console.log("at the delete service");
+  // console.log(Id);
+  const checkPostExist = prisma.post.findFirst({
     where: {
-      id: Id,
+      id: +postId,
     },
   });
-  if (!post) {
+  if (!checkPostExist) {
     return "The post of given id doesnt exist";
   }
-  return { post };
+  await prisma.post.delete({
+    where: {
+      id: +postId,
+    },
+  });
+  return "Successfully deleted post";
 };
 
 export { fetchpost, createpost, updatepost, deletepost };

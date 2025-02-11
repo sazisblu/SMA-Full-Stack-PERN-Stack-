@@ -55,16 +55,21 @@ const register = async (req) => {
 };
 
 const getUser = async (req) => {
-  const { userId } = req.params;
-
-  const user = await prisma.user.findFirst({
+  let userId = req.params.userid;
+  console.log("req.newparams:", req.params.userid);
+  console.log("Inside the getuser service");
+  console.log({ userId });
+  // console.log(req.params);
+  const user = await prisma.User.findFirst({
     where: {
-      id: userId,
+      id: +userId,
     },
-  });
+  }
+);
   if (!user) {
     return "User of given email doesnot exists!";
   }
+  console.log("User  found")
   return { user }; //token: token
 };
 

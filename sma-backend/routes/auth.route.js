@@ -29,7 +29,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.get("/user/{userid}", async (req, res) => {
+router.get("/users/:userid", async (req, res) => {
   try {
     const result = await getUser(req);
     res.send(result);

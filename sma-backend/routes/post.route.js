@@ -14,14 +14,8 @@ router.get("/", async (req, res) => {
   try {
     console.log("entered posts being fetched for dashboard");
     // console.log("request being sent for fetching post:", req);
-    const { searchTerm, cursor, limit } = req.query;
-    console.log("searchTerm", searchTerm);
-    const result = await fetchpost({
-      searchTerm: searchTerm,
-      cursor: cursor,
-      limit: limit,
-    });
-    console.log("result:", result);
+    const result = await fetchpost(req);
+    // console.log("result:", result);
     res.json(result);
   } catch (error) {
     console.log("Error at post retreival::", error);
@@ -36,6 +30,7 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     console.log("server at Createpost route");
+    console.log(req.body);
     const result = await createpost(req);
     res.send(result);
   } catch (error) {
@@ -48,7 +43,7 @@ router.post("/", async (req, res) => {
 });
 
 //update a post
-router.patch("/postid", async (req, res) => {
+router.patch("/:postId", async (req, res) => {
   try {
     const result = await updatepost(req);
     res.send(result);
@@ -62,7 +57,7 @@ router.patch("/postid", async (req, res) => {
 });
 
 //delete a post
-router.delete("/postid", async (req, res) => {
+router.delete("/:postId", async (req, res) => {
   try {
     const result = await deletepost(req);
     res.send(result);
